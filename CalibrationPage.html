@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <style>
+    body {
+      text-align: center;
+      font-family: "Trebuchet MS", Arial;
+      margin-left:auto;
+      margin-right:auto;
+      
+    }
+    table, th, td {
+      border: 1px solid black;
+
+    }
+    .slider {
+	  -webkit-appearance: none;
+	  width: 300px;
+	  height: 25px;
+	  border-radius: 10px;  
+	  background: #ffffff;
+	  outline: none;
+	  opacity: 0.7;
+	  -webkit-transition: .2s;
+	  transition: opacity .2s;
+	}
+	
+	.slider::-webkit-slider-thumb {
+	  -webkit-appearance: none;
+	  appearance: none;
+	  width: 35px;
+	  height: 35px;
+	  border-radius: 50%; 
+	  background: #ff3410;
+	  cursor: pointer;
+	}
+    
+	
+  </style>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body style="background-color:#70cfff;">
+  <table>
+    <tr>
+      <th>Servo #</th>
+      <th>Minimum PWM</th>
+      <th>Maximum PWM</th>
+      <th>Position</th>
+      <th>Adjustment</th>
+    </tr>
+    <tr>
+      <td>Servo 1</td>
+      <td>90</td>
+      <td>500</td>
+      <td><h2 style="color:#ffffff;">Position: <span id="servoPos0"></span>&#176;</h2></td>
+      <td><input type="range" min="0" max="180" class="slider" id="servoSlider0" onchange="servo(this.value)"/></td>
+    </tr>
+    <tr>
+      <td>Servo 2</td>
+      <td>90</td>
+      <td>500</td>
+      <td><h2 style="color:#ffffff;">Position: <span id="servoPos1"></span>&#176;</h2></td>
+      <td><input type="range" min="0" max="180" class="slider" id="servoSlider1" onchange="servo(this.value)"/></td>
+    </tr>
+  </table>
+  <h1 style="color:#ff3410;">Servo Control</h1>
+  
+  
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const sliders = document.querySelectorAll(".slider");
+
+      sliders.forEach((slider, index) => {
+        const positionSpan = document.getElementById("servoPos" + index);
+
+        // Set initial position
+        positionSpan.innerHTML = slider.value;
+
+        // Update position display and send value on input
+        slider.oninput = function () {
+          positionSpan.innerHTML = this.value;
+          servo(index, this.value);   // Pass servo index and value
+        };
+      });
+
+      function servo(servoNumber, pos) {
+        $.get("/?servo=" + servoNumber + "&value=" + pos);
+      }
+    });
+  </script>
+</body>
+</html>
