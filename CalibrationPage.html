@@ -1,106 +1,99 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="data:,">
-  <style>
-    body {
-      text-align: center;
-      font-family: "Trebuchet MS", Arial;
-      margin-left:auto;
-      margin-right:auto;
-      
-    }
-    table, th, td {
-      border: 1px solid black;
-
-    }
-    .slider {
-	  -webkit-appearance: none;
-	  width: 300px;
-	  height: 25px;
-	  border-radius: 10px;  
-	  background: #ffffff;
-	  outline: none;
-	  opacity: 0.7;
-	  -webkit-transition: .2s;
-	  transition: opacity .2s;
-	}
-	
-	.slider::-webkit-slider-thumb {
-	  -webkit-appearance: none;
-	  appearance: none;
-	  width: 35px;
-	  height: 35px;
-	  border-radius: 50%; 
-	  background: #ff3410;
-	  cursor: pointer;
-	}
-    
-	
-  </style>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-</head>
-<body style="background-color:#70cfff;">
-  <table>
-    <tr>
-      <th>Servo #</th>
-      <th>Minimum PWM</th>
-      <th>Maximum PWM</th>
-      <th>Position</th>
-      <th>Adjustment</th>
-    </tr>
-    <tr>
-      <td>Servo 1</td>
-      <td><input type="number" id="minimum0" value="50" onchange="minMaxChange(0)"/></td>
-      <td><input type="number" id="maximum0" value="500"onchange="minMaxChange(0)"/></td>
-      <td><h2 style="color:#ffffff;">Position: <span id="servoPos0"></span>&#176;</h2></td>
-      <td><input type="range" min="0" max="180" class="slider" id="servoSlider0" onchange="servo(0, this.value)"/></td>
-    </tr>
-    <tr>
-      <td>Servo 2</td>
-      <td><input type="number" id="minimum1" value="50"/></td>
-      <td><input type="number" id="maximum1" value="500"/></td>
-      <td><h2 style="color:#ffffff;">Position: <span id="servoPos1"></span>&#176;</h2></td>
-      <td><input type="range" min="0" max="180" class="slider" id="servoSlider1" onchange="servo(1, this.value)"/></td>
-    </tr>
-  </table>
-  <h1 style="color:#ff3410;">Servo Control</h1>
-  
-  
-  <script>
-    const sliders = document.querySelectorAll(".slider");
-    sliders.forEach((slider, index) => {
-      const positionSpan = document.getElementById("servoPos" + index);
-      const minimum = document.getElementById("minimum" + index).value;
-      const maximum = document.getElementById("maximum" + index).value;
-
-      // Set initial position
-      positionSpan.innerHTML = slider.value;
-
-      // Update position display and send value on input
-      slider.oninput = function () {
-        slider.value = this.value;
-        positionSpan.innerHTML = this.value;      
-      };
-    });
-  
-
-    $.ajaxSetup({timeout:1000});
-    function servo(servoNumber, pos) {
-        const minimum = document.getElementById("minimum" + servoNumber).value;
-        const maximum = document.getElementById("maximum" + servoNumber).value;
-
-        $.get("/?angleChange=1&servo=" + servoNumber + "&value=" + pos + "&minimum=" + minimum + "&maximum=" + maximum);
-        {Connection: close};
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+    <style>
+      body {
+        text-align: center;
+        font-family: "Trebuchet MS", Arial;
+        margin-left:auto;
+        margin-right:auto;
+        
       }
-    function minMaxChange(servoNumber) {
-      const minimum = document.getElementById("minimum" + servoNumber).value;
-      const maximum = document.getElementById("maximum" + servoNumber).value;
+      table, th, td {
+        border: 1px solid black;
 
-      $.get("/?angleChange=0&servo=" + servoNumber + "&value=" + pos + "&minimum=" + minimum + "&maximum=" + maximum);
-      {Connection: close};
+      }
+      .slider {
+      -webkit-appearance: none;
+      width: 300px;
+      height: 25px;
+      border-radius: 10px;  
+      background: #ffffff;
+      outline: none;
+      opacity: 0.7;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+    
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%; 
+      background: #ff3410;
+      cursor: pointer;
+    }
+      
+    
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  </head>
+  <body style="background-color:#70cfff;">
+    <table>
+      <tr>
+        <th>Servo #</th>
+        <th>Minimum PWM</th>
+        <th>Maximum PWM</th>
+        <th>Position</th>
+        <th>Adjustment</th>
+      </tr>
+      <tr>
+        <td>Servo 1</td>
+        <td><span id="minimum0">-</span></td>
+        <td><span id="maximum0">-</span></td>
+        <td><h2 style="color:#ffffff;">Position: <span id="servoPos0"></span>&#176;</h2></td>
+        <td><input type="range" min="0" max="180" class="slider" id="servoSlider0" onchange="servo(0, this.value)"/></td>
+      </tr>
+      <tr>
+        <td>Servo 2</td>
+        <td><span id="minimum1">-</span></td>
+        <td><span id="maximum1">-</span></td>
+        <td><h2 style="color:#ffffff;">Position: <span id="servoPos1"></span>&#176;</h2></td>
+        <td><input type="range" min="0" max="180" class="slider" id="servoSlider1" onchange="servo(1, this.value)"/></td>
+      </tr>
+    </table>
+  </body>
+  <script>
+    var Socket;
+
+    function init()
+    {
+      Socket = new WebSocket('ws://192.168.0.132:81');
+      Socket.onmessage = function(event)
+      {
+        processCommand(event);
+      }
+    }
+
+    function processCommand(event)
+    {
+      var obj = JSON.parse(event.data);
+      for(var i = 0; i < obj.length; i++)
+      {
+        document.getElementById('minimum' + i).innerHTML = obj[i].minimum;
+        document.getElementById('maximum' + i).innerHTML = obj[i].maximum;
+        console.log(obj[i].minimum);
+        console.log(obj[i].maximum);
+      }
+
+    }
+
+    window.onload = function(event)
+    {
+      init();
     }
   </script>
-</body>
 </html>
