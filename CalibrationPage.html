@@ -43,27 +43,18 @@
   </head>
   <body style="background-color:#70cfff;">
     <table>
-      <tr>
-        <th>Servo #</th>
-        <th>Minimum PWM</th>
-        <th>Maximum PWM</th>
-        <th>Position</th>
-        <th>Adjustment</th>
-      </tr>
-      <tr>
-        <td>Servo 1</td>
-        <td><span id="minimum0">-</span></td>
-        <td><span id="maximum0">-</span></td>
-        <td><h2 style="color:#ffffff;">Position: <span id="servoPos0"></span>&#176;</h2></td>
-        <td><input type="range" min="0" max="180" class="slider" id="servoSlider0" onchange="servo(0, this.value)"/></td>
-      </tr>
-      <tr>
-        <td>Servo 2</td>
-        <td><span id="minimum1">-</span></td>
-        <td><span id="maximum1">-</span></td>
-        <td><h2 style="color:#ffffff;">Position: <span id="servoPos1"></span>&#176;</h2></td>
-        <td><input type="range" min="0" max="180" class="slider" id="servoSlider1" onchange="servo(1, this.value)"/></td>
-      </tr>
+      <thead>
+        <tr>
+          <th>Servo #</th>
+          <th>Minimum PWM</th>
+          <th>Maximum PWM</th>
+          <th>Position</th>
+          <th>Adjustment</th>
+        </tr>
+      </thead>
+      <tbody id="servoTableBody">
+
+      </tbody>
     </table>
   </body>
   <script>
@@ -84,10 +75,28 @@
       if(obj["data"])
       {
         const servos = obj["data"];
+        const tableBody = document.getElementById("servoTableBody");
+
+        // Clear current rows
+        tableBody.innerHTML = "";
+
         for(var i = 0; i < servos.length; i++)
         {
-          document.getElementById('minimum' + i).innerHTML = servos[i].minimum;
-          document.getElementById('maximum' + i).innerHTML = servos[i].maximum;
+          let row = document.createElement("tr");
+
+          row.innerHTML = `
+            <td>Servo ${i+1}</td>
+            <td><span id="minimum${i}">${servos[i].minimum}</span></td>
+            <td><span id="maximum${i}">${servos[i].maximum}</span></td>
+            <td><h2 style="color:#ffffff;">Position: <span id="servoPos${i}"></span>&#176;</h2></td>
+            <td>
+              <input type="range" min="0" max="180" class="slider" id="servoSlider${i}" 
+              onchange="servo(${i}, this.value)"/>
+            </td>
+          `;
+      
+          tableBody.appendChild(row);
+          
           console.log(servos[i].minimum);
           console.log(servos[i].maximum);
         }
