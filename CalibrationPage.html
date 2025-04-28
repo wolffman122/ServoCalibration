@@ -88,24 +88,31 @@
             <td>Servo ${i+1}</td>
             <td><span id="minimum${i}">${servos[i].minimum}</span></td>
             <td><span id="maximum${i}">${servos[i].maximum}</span></td>
-            <td><h2 style="color:#ffffff;">Position: <span id="servoPos${i}"></span>&#176;</h2></td>
+            <td><h2 style="color:#ffffff;">Position: <span id="servoPos${i}">5</span>&#176;</h2></td>
             <td>
-              <input type="range" min="0" max="180" class="slider" id="servoSlider${i}" 
+              <input type="range" min="0" max="180" value="5" class="slider" id="servoSlider${i}" 
               onchange="servo(${i}, this.value)"/>
             </td>
           `;
       
           tableBody.appendChild(row);
-          
+
           console.log(servos[i].minimum);
           console.log(servos[i].maximum);
         }
       }
     }
 
+    function servo(number, pos)
+    {
+      document.getElementById("servoPos" + number).innerHTML = pos;
+      
+    }
+
     window.onload = function(event)
     {
       init();
     }
+    
   </script>
 </html>
