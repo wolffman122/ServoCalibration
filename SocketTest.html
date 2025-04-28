@@ -7,11 +7,15 @@
   <body style="background-color: #EEEEEE;">
     <span style="color: #003366">
       <h1>Random number generator</h1>
-      <p>The random number is: <span id="rand">-</span></p>
+      <p>The 1st random number is: <span id="rand1">-</span></p>
+      <p>The 2nd random number is: <span id="rand2">-</span></p>
+      <p><button type="button" id='BTN_SEND_BACK'>Send info to ESP32</button></p>
     </span>
   </body>
   <script>
     var Socket;
+    document.getElementById('BTN_SEND_BACK').addEventListener('click', button_send_back);
+
     function init()
     {
       Socket = new WebSocket('ws://192.168.0.132:81/');
@@ -23,8 +27,23 @@
 
     function processCommand(event)
     {
-      document.getElementById('rand').innerHTML = event.data;
-      console.log(event.data);
+      var obj = JSON.parse(event.data);
+      document.getElementById('rand1').innerHTML = obj.rand1;
+      document.getElementById('rand2').innerHTML = obj.rand2;
+      console.log(obj.rand1);
+      console.log(obj.rand2);
+    }
+
+    function button_send_back()
+    {
+      var guitar = {
+        brand: 'Gibson',
+        type: 'Les Paul Studio',
+        year: 2010,
+        color: 'white'
+      };
+
+      Socket.send(JSON.stringify(guitar));
     }
 
     window.onload = function(event)
