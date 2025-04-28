@@ -52,43 +52,55 @@
     </tr>
     <tr>
       <td>Servo 1</td>
-      <td>90</td>
-      <td>500</td>
+      <td><input type="number" id="minimum0" value="50" onchange="minMaxChange(0)"/></td>
+      <td><input type="number" id="maximum0" value="500"onchange="minMaxChange(0)"/></td>
       <td><h2 style="color:#ffffff;">Position: <span id="servoPos0"></span>&#176;</h2></td>
-      <td><input type="range" min="0" max="180" class="slider" id="servoSlider0" onchange="servo(this.value)"/></td>
+      <td><input type="range" min="0" max="180" class="slider" id="servoSlider0" onchange="servo(0, this.value)"/></td>
     </tr>
     <tr>
       <td>Servo 2</td>
-      <td>90</td>
-      <td>500</td>
+      <td><input type="number" id="minimum1" value="50"/></td>
+      <td><input type="number" id="maximum1" value="500"/></td>
       <td><h2 style="color:#ffffff;">Position: <span id="servoPos1"></span>&#176;</h2></td>
-      <td><input type="range" min="0" max="180" class="slider" id="servoSlider1" onchange="servo(this.value)"/></td>
+      <td><input type="range" min="0" max="180" class="slider" id="servoSlider1" onchange="servo(1, this.value)"/></td>
     </tr>
   </table>
   <h1 style="color:#ff3410;">Servo Control</h1>
   
   
   <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      const sliders = document.querySelectorAll(".slider");
+    const sliders = document.querySelectorAll(".slider");
+    sliders.forEach((slider, index) => {
+      const positionSpan = document.getElementById("servoPos" + index);
+      const minimum = document.getElementById("minimum" + index).value;
+      const maximum = document.getElementById("maximum" + index).value;
 
-      sliders.forEach((slider, index) => {
-        const positionSpan = document.getElementById("servoPos" + index);
+      // Set initial position
+      positionSpan.innerHTML = slider.value;
 
-        // Set initial position
-        positionSpan.innerHTML = slider.value;
-
-        // Update position display and send value on input
-        slider.oninput = function () {
-          positionSpan.innerHTML = this.value;
-          servo(index, this.value);   // Pass servo index and value
-        };
-      });
-
-      function servo(servoNumber, pos) {
-        $.get("/?servo=" + servoNumber + "&value=" + pos);
-      }
+      // Update position display and send value on input
+      slider.oninput = function () {
+        slider.value = this.value;
+        positionSpan.innerHTML = this.value;      
+      };
     });
+  
+
+    $.ajaxSetup({timeout:1000});
+    function servo(servoNumber, pos) {
+        const minimum = document.getElementById("minimum" + servoNumber).value;
+        const maximum = document.getElementById("maximum" + servoNumber).value;
+
+        $.get("/?angleChange=1&servo=" + servoNumber + "&value=" + pos + "&minimum=" + minimum + "&maximum=" + maximum);
+        {Connection: close};
+      }
+    function minMaxChange(servoNumber) {
+      const minimum = document.getElementById("minimum" + servoNumber).value;
+      const maximum = document.getElementById("maximum" + servoNumber).value;
+
+      $.get("/?angleChange=0&servo=" + servoNumber + "&value=" + pos + "&minimum=" + minimum + "&maximum=" + maximum);
+      {Connection: close};
+    }
   </script>
 </body>
 </html>

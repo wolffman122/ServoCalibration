@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 Control</title>
+</head>
+<body>
+  <h1>ESP32 Control</h1>
+  <button onclick="sendData('on')">Turn On</button>
+  <button onclick="sendData('off')">Turn Off</button>
+
+  <script>
+    async function sendData(data) {
+      const response = await fetch('http://192.168.0.132/button', {
+        method: 'POST',
+        body: JSON.stringify({ data: data }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const result = await response.text();
+      console.log(result);
+    }
+  </script>
+</body>
+</html>

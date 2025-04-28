@@ -134,10 +134,10 @@ void loop() {
               client.print(servoNumber+1);
               client.println("</td>");
               client.print("<td>");
-              client.print(<input servoMinimums[servoNumber]);
+              client.print("<input type=\"number\" id=\"minimum" + String(servoNumber) + "\" value=\"" + String(servoMinimums[servoNumber]) + "\" onchange=\"minChange(" + String(servoNumber) + ")\" />");
               client.println("</td>");
               client.print("<td>");
-              client.print(servoMaximums[servoNumber]);
+              client.print("<input type=\"number\" id=\"maximum" + String(servoNumber) + "\" value=\"" + String(servoMaximums[servoNumber]) + "\" onchange=\"maxChange(" + String(servoNumber) + ")\" />");
               client.println("</td>");
 
               client.print("<td>");
@@ -147,7 +147,7 @@ void loop() {
 
               client.print("<td>");
               // Slider control
-              client.print("<input type=\"range\" min=\"0\" max=\"180\" class=\"slider\" id=\"servoSlider" + String(servoNumber) + "\" onchange=\"servo(this.value)\" value=\""+valueString+"\"/>");
+              client.print("<input type=\"range\" min=\"0\" max=\"180\" class=\"slider\" id=\"servoSlider" + String(servoNumber) + "\" onchange=\"servo(" + String(servoNumber) + ", this.value)\" value=\""+valueString+"\"/>");
               client.println("</td>");
 
               client.println("</tr>");
@@ -164,26 +164,44 @@ void loop() {
             
             // Javascript
             client.println("<script>");
-            client.println("document.addEventListener(\"DOMContentLoaded\", function() {");
             client.println("const sliders = document.querySelectorAll(\".slider\");");
 
             client.println("sliders.forEach((slider, index) => {");
             client.println("const positionSpan = document.getElementById(\"servoPos\" + index);");
-
+            
                   // Set initial position
             client.println("positionSpan.innerHTML = slider.value;");
 
                   // Update position display and send value on input
             client.println("slider.oninput = function () {");
-            client.println("positionSpan.innerHTML = this.value;");
-            client.println("servo(index, this.value);");   // Pass servo index and value
+            client.println("slider.value = this.value;");
+            client.println("positionSpan.innerHTML = this.value;");   // Pass servo index and value
             client.println("};");
             client.println("});");
 
+            client.println("$.ajaxSetup({timeout:1000});");
             client.println("function servo(servoNumber, pos) {");
-            client.println("$.get(\"/?servo=\" + servoNumber + \"&value=\" + pos);");
+            client.println("const minimum = document.getElementById(\"minimum\" + servoNumber).value;");
+            client.println("const maximum = document.getElementById(\"maximum\" + servoNumber).value;");
+            client.println("$.get(\"/?angleChange=1&servo=\" + servoNumber + \"&value=\" + pos + \"&minimum=\" + minimum + \"&maximum=\" + maximum);");
             client.println("}");
-            client.println("});");
+
+            client.println("function minChange(servoNumber) {");
+            client.println("const minimum = document.getElementById(\"minimum\" + servoNumber).value;");
+            client.println("const maximum = document.getElementById(\"maximum\" + servoNumber).value;");
+
+            client.println("$.get(\"/?angleChange=0&servo=\" + servoNumber + \"&value=\" + 0 + \"&minimum=\" + minimum + \"&maximum=\" + maximum);");
+            client.println("{Connection: close};");
+            client.println("}");
+
+            client.println("function maxChange(servoNumber) {");
+            client.println("const minimum = document.getElementById(\"minimum\" + servoNumber).value;");
+            client.println("const maximum = document.getElementById(\"maximum\" + servoNumber).value;");
+
+            client.println("$.get(\"/?angleChange=2&servo=\" + servoNumber + \"&value=\" + 0 + \"&minimum=\" + minimum + \"&maximum=\" + maximum);");
+            client.println("{Connection: close};");
+            client.println("}");
+            
             
             // client.println("var servoP = document.getElementById(\"servoPos\"); servoP.innerHTML = slider.value;");
             // client.println("slider.oninput = function() { slider.value = this.value; servoP.innerHTML = this.value; }");
@@ -195,7 +213,7 @@ void loop() {
             client.println("</body></html>");     
             
             // GET data
-            if(header.indexOf("GET /?servo=")>=0)
+            if(header.indexOf("GET /?angleChange=1")>=0)
             {
               int servoIndexStart = header.indexOf("servo=") + 6;
               int servoIndexEnd = header.indexOf("&", servoIndexStart);
@@ -207,8 +225,17 @@ void loop() {
               String valueStr = header.substring(valueIndexStart, valueIndexEnd);
               int value = valueStr.toInt();
 
+              int minimumIndexStart = header.indexOf("minimum=") + 8;
+              int minimumIndexEnd = header.indexOf("&", minimumIndexStart);
+              int minimumValue = header.substring(minimumIndexStart, minimumIndexEnd).toInt();
+
+              int maximumIndexStart = header.indexOf("maximum=") + 8;
+              int maximumIndexEnd = header.indexOf("&", maximumIndexStart);
+              int maximumValue = header.substring(maximumIndexStart, maximumIndexEnd).toInt();
               
-              pwm0 = map(value, 0, 180, SERVOMIN, SERVOMAX);
+              pwm0 = map(value, 0, 180, minimumValue, maximumValue);
+              servoMinimums[servoNum] = minimumValue;
+              servoMaximums[servoNum] = maximumValue;
               pca9685.setPWM(servoNum, 0, pwm0);
 
               Serial.print("Servo ");
@@ -218,7 +245,34 @@ void loop() {
               Serial.print(" (PWM: ");
               Serial.print(pwm0);
               Serial.println(")"); 
-            }         
+            }
+            else if(header.indexOf("GET /?angleChange=0")>=0)
+            {
+              int servoIndexStart = header.indexOf("servo=") + 6;
+              int servoIndexEnd = header.indexOf("&", servoIndexStart);
+              String servoNumber = header.substring(servoIndexStart, servoIndexEnd);
+              int servoNum = servoNumber.toInt();
+
+              int minimumIndexStart = header.indexOf("minimum=") + 8;
+              int minimumIndexEnd = header.indexOf("&", minimumIndexStart);
+              int minimumValue = header.substring(minimumIndexStart, minimumIndexEnd).toInt();
+
+              pca9685.setPWM(servoNum, 0, minimumValue);
+            }
+            else if(header.indexOf("GET /?angleChange=2")>=0)
+            {
+              int servoIndexStart = header.indexOf("servo=") + 6;
+              int servoIndexEnd = header.indexOf("&", servoIndexStart);
+              String servoNumber = header.substring(servoIndexStart, servoIndexEnd);
+              int servoNum = servoNumber.toInt();
+
+              int maximumIndexStart = header.indexOf("maximum=") + 8;
+              int maximumIndexEnd = header.indexOf("&", maximumIndexStart);
+              int maximumValue = header.substring(maximumIndexStart, maximumIndexEnd).toInt();
+
+              pca9685.setPWM(servoNum, 0, maximumValue);
+            }
+
             // The HTTP response ends with another blank line
             client.println();
             
