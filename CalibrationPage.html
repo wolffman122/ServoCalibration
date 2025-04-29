@@ -83,20 +83,27 @@
         for(var i = 0; i < servos.length; i++)
         {
           let row = document.createElement("tr");
-
+          let pos = servos[i].position ?? 5;
           row.innerHTML = `
             <td>Servo ${i+1}</td>
-            <td><span id="minimum${i}">${servos[i].minimum}</span></td>
-            <td><span id="maximum${i}">${servos[i].maximum}</span></td>
-            <td><h2 style="color:#ffffff;">Position: <span id="servoPos${i}">5</span>&#176;</h2></td>
             <td>
-              <input type="range" min="0" max="180" value="5" class="slider" id="servoSlider${i}" 
+              <input type="number" id="minimum${i}" value="${servos[i].minimum}"
+              onchange="updateServoData(${i})">
+            </td>
+            <td>
+              <input type="number" id="maximum${i}" value="${servos[i].maximum}"
+              onchange="updateServoData(${i})">
+            </td>
+            <td><h2 style="color:#ffffff;">Position: <span id="servoPos${i}">${pos}</span>&#176;</h2></td>
+            <td>
+              <input type="range" min="0" max="180" value="${pos}" class="slider" id="servoSlider${i}" 
               onchange="servo(${i}, this.value)"/>
             </td>
           `;
       
           tableBody.appendChild(row);
 
+          console.log(servos[i].position);
           console.log(servos[i].minimum);
           console.log(servos[i].maximum);
         }
@@ -106,7 +113,36 @@
     function servo(number, pos)
     {
       document.getElementById("servoPos" + number).innerHTML = pos;
-      
+      sendServoData();
+    }
+
+    function updateServoData(number)
+    {
+      sendServoData();
+    }
+
+    function sendServoData()
+    {
+      const tableBody = document.getElementById("servoTableBody");
+      const rows = tableBody.getElementsByTagName("tr");
+      const servoData = [];
+
+      for(let i = 0; i < rows.length; i++)
+      {
+        let minValue = parseInt(document.getElementById("minimum" + i).value);
+        let maxValue = parseInt(document.getElementById("maximum" + i).value);
+        let positionValue = parseInt(document.getElementById("servoPos" + i).innerHTML);
+
+        servoData.push({
+          servoNumber: i,
+          minimum: minValue,
+          maximum: maxValue,
+          position: positionValue
+        });
+      }
+
+      console.log(JSON.stringify(servoData));
+      Socket.send(JSON.stringify(servoData));
     }
 
     window.onload = function(event)
