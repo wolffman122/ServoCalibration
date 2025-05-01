@@ -50,12 +50,21 @@
           <th>Maximum PWM</th>
           <th>Position</th>
           <th>Adjustment</th>
+          <th>TotalRange</th>
+          <th>Conversion Factor</th>
+          <th>Adjusted Minimum</th>
+          <th>Adjusted Maximum</th>
         </tr>
       </thead>
       <tbody id="servoTableBody">
 
       </tbody>
     </table>
+    <input type="button" id="resetAllToMinPWM" value="Reset All To Minimum PWM"
+      onclick="onResetAllToPWM(true)" >
+    <input type="button" id="resetAllToMaxPWM" value="Reset All To Maximum PWM"
+      onclick="onResetAllToPWM(false)" >
+      
   </body>
   <script>
     var Socket;
@@ -84,28 +93,44 @@
         {
           let row = document.createElement("tr");
           let pos = servos[i].position ?? 5;
+          let totalRange = servos[i].totalRange ?? 180;
+          let conversionFactor = servos[i].conversionFactor ?? 0.0;
+          let adjustedMinPWM = servos[i].adjustedMinPWM ?? 0;
+          let adjustedMaxPWM = servos[i].adjustedMaxPWM ?? 0;
+
+          console.log("Min " + adjustedMinPWM);
+          console.log("Max " + adjustedMaxPWM);
+
           row.innerHTML = `
             <td>Servo ${i+1}</td>
             <td>
               <input type="number" id="minimum${i}" value="${servos[i].minimum}"
-              onchange="updateServoData(${i})">
+              onchange="sendMinPwmValue(${i})">
             </td>
             <td>
               <input type="number" id="maximum${i}" value="${servos[i].maximum}"
-              onchange="updateServoData(${i})">
+              onchange="sendMaxPwmValue(${i})">
             </td>
             <td><h2 style="color:#ffffff;">Position: <span id="servoPos${i}">${pos}</span>&#176;</h2></td>
             <td>
               <input type="range" min="0" max="180" value="${pos}" class="slider" id="servoSlider${i}" 
               onchange="servo(${i}, this.value)"/>
             </td>
+            <td>
+              <input type="number" id="totalRange${i}" value="${totalRange}"
+              onchange="sendTotalRange(${i})">
+            <td>
+              <span id="conversionFactor${i}">${conversionFactor}</span>
+            </td>
+            <td>
+              <span id="adjustedMinPWM${i}">${adjustedMinPWM}</span>
+            </td>
+            <td>
+              <span id="adjustedMaxPWM${i}">${adjustedMaxPWM}</span>
+            </td>
           `;
       
           tableBody.appendChild(row);
-
-          console.log(servos[i].position);
-          console.log(servos[i].minimum);
-          console.log(servos[i].maximum);
         }
       }
     }
@@ -113,7 +138,29 @@
     function servo(number, pos)
     {
       document.getElementById("servoPos" + number).innerHTML = pos;
-      sendServoData();
+
+      const positionData = [];
+
+      let minValue = parseInt(document.getElementById("minimum" + number).value);
+      let maxValue = parseInt(document.getElementById("maximum" + number).value);
+      let positionValue = parseInt(document.getElementById("servoPos" + number).innerHTML);
+      let conversionFactor = parseFloat(document.getElementById("conversionFactor" + number).innerHTML);
+
+      positionData.push({
+        servoNumber: number,
+        minimum: minValue,
+        maximum: maxValue,
+        position: positionValue,
+        conversionFactor: conversionFactor
+      });
+
+      const message = {
+        action: "updatePositionData",
+        data: positionData
+      };
+
+      console.log(JSON.stringify(message));
+      Socket.send(JSON.stringify(message));
     }
 
     function updateServoData(number)
@@ -132,17 +179,94 @@
         let minValue = parseInt(document.getElementById("minimum" + i).value);
         let maxValue = parseInt(document.getElementById("maximum" + i).value);
         let positionValue = parseInt(document.getElementById("servoPos" + i).innerHTML);
+        let conversionFactor = parseFloat(document.getElementById("conversionFactor" + i).innerHTML);
 
         servoData.push({
           servoNumber: i,
           minimum: minValue,
           maximum: maxValue,
-          position: positionValue
+          position: positionValue,
+          conversionFactor: conversionFactor
         });
       }
 
-      console.log(JSON.stringify(servoData));
-      Socket.send(JSON.stringify(servoData));
+      const message = {
+        action: "updateServoData",
+        data: servoData
+      };
+
+      console.log(JSON.stringify(message));
+      Socket.send(JSON.stringify(message));
+    }
+
+    function sendMinPwmValue(servoNumber)
+    {
+      const minPWMData = [];
+      let minPWM = parseInt(document.getElementById("minimum" + servoNumber).value);
+
+      minPWMData.push({
+        servoNumber: servoNumber,
+        minimum: minPWM
+      });
+
+      const message = {
+        action: "minPWMChange",
+        data: minPWMData
+      };
+
+      
+      console.log(JSON.stringify(message));
+      Socket.send(JSON.stringify(message));
+    }
+
+    function sendMaxPwmValue(servoNumber)
+    {
+      const maxPWMData = [];
+      let maxPWM = parseInt(document.getElementById("maximum" + servoNumber).value);
+
+      maxPWMData.push({
+        servoNumber: servoNumber,
+        maximum: maxPWM
+      });
+
+      const message = {
+        action: "maxPWMChange",
+        data: maxPWMData
+      };
+
+      
+      console.log(JSON.stringify(message));
+      Socket.send(JSON.stringify(message));
+    }
+
+    function onResetAllToPWM(minimum)
+    {
+      const message = {
+        action: "setAllToPWM",
+        minimum: minimum
+      };
+
+      console.log(JSON.stringify(message));
+      Socket.send(JSON.stringify(message));
+    }
+
+    function sendTotalRange(servoNumber)
+    {
+      const totalRangeData = [];
+      let totalRange = parseInt(document.getElementById("totalRange" + servoNumber).value);
+
+      totalRangeData.push({
+        servoNumber: servoNumber,
+        totalRange: totalRange
+      });
+
+      const message = {
+        action: "totalRangeChange",
+        data: totalRangeData
+      };
+
+      console.log(JSON.stringify(message));
+      Socket.send(JSON.stringify(message));
     }
 
     window.onload = function(event)
