@@ -1,11 +1,14 @@
 #include <Wire.h>
 #include <WiFi.h>
 #include <WebSocketsServer.h>
-#include <Adafruit_PWMServoDriver.h>
+
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include "WaveGenerator.h"
+#include "ServoDriver.h"
 
-Adafruit_PWMServoDriver pca9685 = Adafruit_PWMServoDriver(0x40);
+std::shared_ptr<IServoDriver> spServoDriver;
+
 WebSocketsServer webSocket = WebSocketsServer(81);
 
 int interval = 10000;
@@ -25,14 +28,7 @@ const long timeoutTime = 2000;
 
 Preferences preferences;
 
-// Wave Variables
-bool waveStarted = false;
-int wavePosition = 0;
-int waveDirection = 1; // 1 = increasing, -1 = decreasing
-unsigned long lastWaveUpdate = 0;
-const int waveStep = 2;                // degrees per update
-const unsigned long waveInterval = 20; // ms between updates
-int numberOfWaveServos = 1;            // Number of servos in the wave
+WaveGenerator *waveGenerator;
 
 int servoMinimums[12] = {75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75};
 int servoMaximums[12] = {500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500};
@@ -100,7 +96,7 @@ void MinimumAllServos()
 {
   for (int i = 0; i < 12; i++)
   {
-    pca9685.setPWM(i, 0, servoMinimums[i]);
+    spServoDriver->setPWM(i, 0, servoMinimums[i]);
     servoPositions[i] = map(servoMinimums[i], servoMinimums[i], servoMaximums[i], 0, 180);
     Serial.println("Minimum Servo " + String(i) + ": " + String(servoPositions[i]));
   }
@@ -111,7 +107,7 @@ void CenterAllServos()
   for (int i = 0; i < 12; i++)
   {
     int target = servoMinimums[i] + (servoMaximums[i] - servoMinimums[i]) / 2;
-    pca9685.setPWM(i, 0, target);
+    spServoDriver->setPWM(i, 0, target);
     servoPositions[i] = map(target, servoMinimums[i], servoMaximums[i], 0, 180);
     Serial.println("Centered Servo " + String(i) + ": " + String(servoPositions[i]));
   }
@@ -121,61 +117,9 @@ void MaximumAllServos()
 {
   for (int i = 0; i < 12; i++)
   {
-    pca9685.setPWM(i, 0, servoMaximums[i]);
+    spServoDriver->setPWM(i, 0, servoMaximums[i]);
     servoPositions[i] = map(servoMaximums[i], servoMinimums[i], servoMaximums[i], 0, 180);
     Serial.println("Maximum Servo " + String(i) + ": " + String(servoPositions[i]));
-  }
-}
-
-void StartWave()
-{
-  waveStarted = true;
-  wavePosition = 0;
-  waveDirection = 1;
-  lastWaveUpdate = millis();
-}
-
-void StopWave()
-{
-  waveStarted = false;
-}
-
-void AddWaveServo()
-{
-  (numberOfWaveServos < 12) ? numberOfWaveServos++ : Serial.println("Maximum number of wave servos reached.");
-}
-
-void RemoveWaveServo()
-{
-  (numberOfWaveServos > 1) ? numberOfWaveServos-- : Serial.println("Minimum number of wave servos reached.");
-}
-
-void WaveAnimation()
-{
-  unsigned long now = millis();
-  if (now - lastWaveUpdate > waveInterval)
-  {
-    // Move position
-    wavePosition += waveDirection * waveStep;
-    if (wavePosition >= 180)
-    {
-      wavePosition = 180;
-      waveDirection = -1; // Change direction to decreasing
-    }
-    else if (wavePosition <= 0)
-    {
-      wavePosition = 0;
-      waveDirection = 1; // Change direction to increasing
-    }
-
-    for (int i = 0; i < numberOfWaveServos; i++)
-    {
-      int pwm = map(wavePosition, 0, 180, servoMinimums[i], servoMaximums[i]);
-      pca9685.setPWM(i, 0, pwm);
-      servoPositions[i] = wavePosition;
-    }
-
-    lastWaveUpdate = now;
   }
 }
 
@@ -262,19 +206,19 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
         break;
       case commands::startWave:
         // Make all servos wave
-        StartWave();
+        waveGenerator->StartWave();
         break;
       case commands::stopWave:
         // Stop the wave animation
-        StopWave();
+        waveGenerator->StopWave();
         break;
       case commands::addWaveServo:
         // Add a servo to the wave animation
-        AddWaveServo();
+        waveGenerator->AddWaveServo();
         break;
       case commands::removeWaveServo:
         // Remove a servo from the wave animation
-        RemoveWaveServo();
+        waveGenerator->RemoveWaveServo();
         break;
       case commands::updateServoData:
         Serial.println("Received updateServoData action.");
@@ -297,7 +241,7 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
           JsonArray dataArray = docRX["data"];
           const int servoNumber = (int)(dataArray[0]["servoNumber"]);
           servoMinimums[servoNumber] = (int)(dataArray[0]["minimum"]);
-          pca9685.setPWM(servoNumber, 0, servoMinimums[servoNumber]);
+          spServoDriver->setPWM(servoNumber, 0, servoMinimums[servoNumber]);
         }
         break;
       case commands::maxPWMChange:
@@ -306,7 +250,7 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
           JsonArray dataArray = docRX["data"];
           const int servoNumber = (int)(dataArray[0]["servoNumber"]);
           servoMaximums[servoNumber] = (int)(dataArray[0]["maximum"]);
-          pca9685.setPWM(servoNumber, 0, servoMaximums[servoNumber]);
+          spServoDriver->setPWM(servoNumber, 0, servoMaximums[servoNumber]);
         }
         break;
       case commands::setAllToPWM:
@@ -316,7 +260,7 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
           for (int i = 0; i < 12; i++)
           {
             int target = minimum ? servoMinimums[i] : servoMaximums[i];
-            pca9685.setPWM(i, 0, target);
+            spServoDriver->setPWM(i, 0, target);
           }
         }
         break;
@@ -347,7 +291,7 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
           servoPositions[servoNumber] = position;
           Serial.println("Received position update for servo " + String(servoNumber) + ": " + String(position) + ": " + String(servoPositions[servoNumber]));
           long pwmPosition = map(position, 0, 180, servoMinimums[servoNumber], servoMaximums[servoNumber]);
-          pca9685.setPWM(servoNumber, 0, pwmPosition);
+          spServoDriver->setPWM(servoNumber, 0, pwmPosition);
         }
         break;
       default:
@@ -374,11 +318,9 @@ void setup()
 
   bool wireBeginRet = Wire.begin(20, 21);
   Serial.println("Wire Begin " + wireBeginRet);
-  pca9685.begin();
 
-  Serial.println("PCA9685 initialized");
-  pca9685.setPWMFreq(50);
-  Serial.println("PCA9685 frequency set to 50Hz");
+  spServoDriver = std::make_shared<ServoDriver>();
+  waveGenerator = new WaveGenerator(*spServoDriver, servoPositions, servoMinimums, servoMaximums);
 
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
@@ -390,8 +332,8 @@ void setup()
 
 void loop()
 {
-  if (waveStarted)
-    WaveAnimation();
+  if (waveGenerator->isWaveStarted())
+    waveGenerator->UpdateWave();
 
   webSocket.loop();
 
