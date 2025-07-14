@@ -25,6 +25,15 @@ const long timeoutTime = 2000;
 
 Preferences preferences;
 
+// Wave Variables
+bool waveStarted = false;
+int wavePosition = 0;
+int waveDirection = 1; // 1 = increasing, -1 = decreasing
+unsigned long lastWaveUpdate = 0;
+const int waveStep = 2;                // degrees per update
+const unsigned long waveInterval = 20; // ms between updates
+int numberOfWaveServos = 1;            // Number of servos in the wave
+
 int servoMinimums[12] = {75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75};
 int servoMaximums[12] = {500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500};
 int servoPositions[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -42,7 +51,10 @@ enum class commands
   minimum,
   center,
   maximum,
-  wave,
+  startWave,
+  stopWave,
+  addWaveServo,
+  removeWaveServo,
   updateServoData,
   minPWMChange,
   maxPWMChange,
@@ -60,8 +72,14 @@ commands getCommandFromString(const String &actionStr)
     return commands::center;
   else if (actionStr == "maximum")
     return commands::maximum;
-  else if (actionStr == "wave")
-    return commands::wave;
+  else if (actionStr == "startWave")
+    return commands::startWave;
+  else if (actionStr == "stopWave")
+    return commands::stopWave;
+  else if (actionStr == "addServo")
+    return commands::addWaveServo;
+  else if (actionStr == "removeServo")
+    return commands::removeWaveServo;
   else if (actionStr == "updateServoData")
     return commands::updateServoData;
   else if (actionStr == "minPWMChange")
@@ -111,6 +129,54 @@ void MaximumAllServos()
 
 void StartWave()
 {
+  waveStarted = true;
+  wavePosition = 0;
+  waveDirection = 1;
+  lastWaveUpdate = millis();
+}
+
+void StopWave()
+{
+  waveStarted = false;
+}
+
+void AddWaveServo()
+{
+  (numberOfWaveServos < 12) ? numberOfWaveServos++ : Serial.println("Maximum number of wave servos reached.");
+}
+
+void RemoveWaveServo()
+{
+  (numberOfWaveServos > 1) ? numberOfWaveServos-- : Serial.println("Minimum number of wave servos reached.");
+}
+
+void WaveAnimation()
+{
+  unsigned long now = millis();
+  if (now - lastWaveUpdate > waveInterval)
+  {
+    // Move position
+    wavePosition += waveDirection * waveStep;
+    if (wavePosition >= 180)
+    {
+      wavePosition = 180;
+      waveDirection = -1; // Change direction to decreasing
+    }
+    else if (wavePosition <= 0)
+    {
+      wavePosition = 0;
+      waveDirection = 1; // Change direction to increasing
+    }
+
+    for (int i = 0; i < numberOfWaveServos; i++)
+    {
+      int pwm = map(wavePosition, 0, 180, servoMinimums[i], servoMaximums[i]);
+      pca9685.setPWM(i, 0, pwm);
+      servoPositions[i] = wavePosition;
+    }
+
+    lastWaveUpdate = now;
+  }
 }
 
 void initWiFi()
@@ -194,9 +260,21 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
         // Set all servos to maximum
         MaximumAllServos();
         break;
-      case commands::wave:
+      case commands::startWave:
         // Make all servos wave
         StartWave();
+        break;
+      case commands::stopWave:
+        // Stop the wave animation
+        StopWave();
+        break;
+      case commands::addWaveServo:
+        // Add a servo to the wave animation
+        AddWaveServo();
+        break;
+      case commands::removeWaveServo:
+        // Remove a servo from the wave animation
+        RemoveWaveServo();
         break;
       case commands::updateServoData:
         Serial.println("Received updateServoData action.");
@@ -312,6 +390,9 @@ void setup()
 
 void loop()
 {
+  if (waveStarted)
+    WaveAnimation();
+
   webSocket.loop();
 
   unsigned long now = millis();
