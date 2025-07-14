@@ -1,6 +1,6 @@
 #include "IServoDriver.h"
 
-class WaveGenerator
+class FanGenerator
 {
 private:
   bool waveStarted = false;
@@ -16,14 +16,13 @@ private:
   int *servoPositions = nullptr;
 
 public:
-  WaveGenerator(IServoDriver &servoDriver, int* servoPositions, int *servoMinimums, int *servoMaximums);
+  FanGenerator(IServoDriver &servoDriver, int *servoPositions, int *servoMinimums, int *servoMaximums);
 
   void Update();
-  void StartWave();
-  void StopWave();
+  void Start();
+  void Stop();
 
-  bool isWaveStarted();
-  void UpdateWave();
-  void AddWaveServo();
-  void RemoveWaveServo();
+  bool isStarted();
+  void AddServo();
+  void RemoveServo();
 };
