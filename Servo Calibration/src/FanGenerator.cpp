@@ -19,7 +19,7 @@ void FanGenerator::Stop()
   waveStarted = false;
 }
 
-bool FanGenerator::isStarted()
+bool FanGenerator::isStarted() const
 {
   return waveStarted;
 }

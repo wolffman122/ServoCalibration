@@ -28,7 +28,7 @@ const long timeoutTime = 2000;
 
 Preferences preferences;
 
-FanGenerator *fanGenerator;
+std::shared_ptr<IGenerator> spGenerator;
 
 int servoMinimums[12] = {75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75};
 int servoMaximums[12] = {500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500};
@@ -212,19 +212,19 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
         break;
       case commands::startWave:
         // Make all servos wave
-        fanGenerator->Start();
+        spGenerator->Start();
         break;
       case commands::stopWave:
         // Stop the wave animation
-        fanGenerator->Stop();
+        spGenerator->Stop();
         break;
       case commands::addWaveServo:
         // Add a servo to the wave animation
-        fanGenerator->AddServo();
+        spGenerator->AddServo();
         break;
       case commands::removeWaveServo:
         // Remove a servo from the wave animation
-        fanGenerator->RemoveServo();
+        spGenerator->RemoveServo();
         break;
       case commands::updateServoData:
         Serial.println("Received updateServoData action.");
@@ -326,7 +326,7 @@ void setup()
   Serial.println("Wire Begin " + wireBeginRet);
 
   spServoDriver = std::make_shared<ServoDriver>();
-  fanGenerator = new FanGenerator(*spServoDriver, servoPositions, servoMinimums, servoMaximums);
+  spGenerator = std::make_shared<FanGenerator>(*spServoDriver, servoPositions, servoMinimums, servoMaximums);
 
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
@@ -338,8 +338,8 @@ void setup()
 
 void loop()
 {
-  if (fanGenerator->isStarted())
-    fanGenerator->Update();
+  if (spGenerator->isStarted())
+    spGenerator->Update();
 
   webSocket.loop();
 

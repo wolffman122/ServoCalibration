@@ -1,6 +1,7 @@
+#include "IGenerator.h"
 #include "IServoDriver.h"
 
-class FanGenerator
+class FanGenerator: public IGenerator
 {
 private:
   bool waveStarted = false;
@@ -18,11 +19,11 @@ private:
 public:
   FanGenerator(IServoDriver &servoDriver, int *servoPositions, int *servoMinimums, int *servoMaximums);
 
-  void Update();
-  void Start();
-  void Stop();
+  virtual void Update() override;
+  virtual void Start() override;
+  virtual void Stop() override;
 
-  bool isStarted();
-  void AddServo();
-  void RemoveServo();
+  virtual bool isStarted() const override;
+  virtual void AddServo() override;
+  virtual void RemoveServo() override;
 };
