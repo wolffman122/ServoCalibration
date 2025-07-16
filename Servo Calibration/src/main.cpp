@@ -10,7 +10,7 @@
 
 std::shared_ptr<IServoDriver> spServoDriver;
 
-WebSocketsServer webSocket = WebSocketsServer(81);
+WebSocketsServer *pwebSocketServer = new WebSocketsServer(81);
 
 int interval = 10000;
 unsigned long previousMillis = 0;
@@ -26,8 +26,8 @@ int servoMinimums[12] = {75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75};
 int servoMaximums[12] = {500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500};
 int servoPositions[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-JsonDocument<200> docTX;
-StaticJsonDocument<200> docRX;
+JsonDocument docTX;
+JsonDocument docRX;
 
 enum class commands
 {
@@ -90,9 +90,9 @@ void MinimumAllServos()
   for (int i = 0; i < 12; i++)
   {
     spServoDriver->setPWM(i, 0, servoMinimums[i]);
-    servoPositions[i] = map(servoMinimums[i], servoMinimums[i], servoMaximums[i], 0, 180);
-    Serial.println("Minimum Servo " + String(i) + ": " + String(servoPositions[i]));
   }
+
+  pwebSocketServer->broadcastTXT("Minimum Servos");
 }
 
 void CenterAllServos()
@@ -101,9 +101,9 @@ void CenterAllServos()
   {
     int target = servoMinimums[i] + (servoMaximums[i] - servoMinimums[i]) / 2;
     spServoDriver->setPWM(i, 0, target);
-    servoPositions[i] = map(target, servoMinimums[i], servoMaximums[i], 0, 180);
-    Serial.println("Centered Servo " + String(i) + ": " + String(servoPositions[i]));
   }
+
+  pwebSocketServer->broadcastTXT("Centered Servos");
 }
 
 void MaximumAllServos()
@@ -111,9 +111,9 @@ void MaximumAllServos()
   for (int i = 0; i < 12; i++)
   {
     spServoDriver->setPWM(i, 0, servoMaximums[i]);
-    servoPositions[i] = map(servoMaximums[i], servoMinimums[i], servoMaximums[i], 0, 180);
-    Serial.println("Maximum Servo " + String(i) + ": " + String(servoPositions[i]));
   }
+
+  pwebSocketServer->broadcastTXT("Maximum Servos");
 }
 
 void initWiFi()
@@ -171,7 +171,7 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
         break;
       case commands::startFan:
         // Switch to FanGenerator and start
-        spGenerator = std::make_shared<FanGenerator>(*spServoDriver, servoPositions, servoMinimums, servoMaximums);
+        spGenerator = std::make_shared<FanGenerator>(*spServoDriver, pwebSocketServer, servoPositions, servoMinimums, servoMaximums);
         spGenerator->Start();
         break;
       case commands::stopFan:
@@ -181,7 +181,7 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
         break;
       case commands::startWave:
         // Switch to WaveGenerator and start
-        spGenerator = std::make_shared<WaveGenerator>(*spServoDriver, servoPositions, servoMinimums, servoMaximums);
+        spGenerator = std::make_shared<WaveGenerator>(*spServoDriver, pwebSocketServer, servoPositions, servoMinimums, servoMaximums);
         spGenerator->Start();
         break;
       case commands::stopWave:
@@ -221,10 +221,10 @@ void setup()
   Serial.println("Wire Begin " + wireBeginRet);
 
   spServoDriver = std::make_shared<ServoDriver>();
-  spGenerator = std::make_shared<FanGenerator>(*spServoDriver, servoPositions, servoMinimums, servoMaximums);
+  spGenerator = std::make_shared<FanGenerator>(*spServoDriver, pwebSocketServer, servoPositions, servoMinimums, servoMaximums);
 
-  webSocket.begin();
-  webSocket.onEvent(webSocketEvent);
+  pwebSocketServer->begin();
+  pwebSocketServer->onEvent(webSocketEvent);
 
   Serial.println("Setup Done");
 }
@@ -234,28 +234,12 @@ void loop()
   if (spGenerator->isStarted())
     spGenerator->Update();
 
-  webSocket.loop();
+  pwebSocketServer->loop();
 
   unsigned long now = millis();
   if (now - previousMillis > interval)
   {
-    String str = String(random(100));
-    String jsonString = "";
-    docTX.clear(); // Always clear before reuse!.
-    JsonArray dataArray = docTX.to<JsonArray>();
-
-    for (int i = 0; i < 12; i++)
-    {
-      JsonObject obj = dataArray.add<JsonObject>();
-      obj["servoNumber"] = i;
-      obj["minimum"] = servoMinimums[i];
-      obj["maximum"] = servoMaximums[i];
-      obj["position"] = servoPositions[i];
-    }
-
-    serializeJson(docTX, jsonString);
-    // Serial.println(jsonString);
-    webSocket.broadcastTXT(jsonString);
+    
     previousMillis = now;
   }
 }

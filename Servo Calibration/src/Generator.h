@@ -1,11 +1,14 @@
 #pragma once
+
 #include "IServoDriver.h"
+#include <WebSocketsServer.h>
 #include "IGenerator.h"
 
 class Generator : public IGenerator
 {
 protected:
   IServoDriver &m_ServoDriver;
+  WebSocketsServer *m_pWebSocket;
   bool m_Started = false;
   int m_Position = 0;
   int m_Direction = 1; // 1 = increasing, -1 = decreasing
@@ -18,7 +21,7 @@ protected:
   int *m_ServoPositions = nullptr;
 
 public:
-  Generator(IServoDriver &servoDriver, int *servoPositions, int *servoMinimums, int *servoMaximums);
+  Generator(IServoDriver &servoDriver, WebSocketsServer *pWebSocket, int *servoPositions, int *servoMinimums, int *servoMaximums);
 
   virtual ~Generator() override = default;
 

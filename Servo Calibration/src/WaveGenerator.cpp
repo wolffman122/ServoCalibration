@@ -1,10 +1,10 @@
 #include <Arduino.h>
 #include "WaveGenerator.h"
 
-WaveGenerator::WaveGenerator(IServoDriver &servoDriver, int *servoPositions, int *servoMinimums, int *servoMaximums)
-    : Generator(servoDriver, servoPositions, servoMinimums, servoMaximums)
+WaveGenerator::WaveGenerator(IServoDriver &servoDriver, WebSocketsServer *pWebSocket, int *servoPositions, int *servoMinimums, int *servoMaximums)
+    : Generator(servoDriver, pWebSocket, servoPositions, servoMinimums, servoMaximums)
 {
-  m_NumberOfServos = 4;
+  m_NumberOfServos = 6;
 }
 
 void WaveGenerator::Update()

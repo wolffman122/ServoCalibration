@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "FanGenerator.h"
 
-FanGenerator::FanGenerator(IServoDriver &servoDriver, int *servoPositions, int *servoMinimums, int *servoMaximums)
-    : Generator(servoDriver, servoPositions, servoMinimums, servoMaximums)
+FanGenerator::FanGenerator(IServoDriver &servoDriver, WebSocketsServer *pWebSocket, int *servoPositions, int *servoMinimums, int *servoMaximums)
+    : Generator(servoDriver, pWebSocket, servoPositions, servoMinimums, servoMaximums)
 {
 }
 
