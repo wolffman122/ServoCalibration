@@ -1,12 +1,13 @@
 #include <Arduino.h>
-#include "FanGenerator.h"
+#include "WaveGenerator.h"
 
-FanGenerator::FanGenerator(IServoDriver &servoDriver, int *servoPositions, int *servoMinimums, int *servoMaximums)
+WaveGenerator::WaveGenerator(IServoDriver &servoDriver, int *servoPositions, int *servoMinimums, int *servoMaximums)
     : Generator(servoDriver, servoPositions, servoMinimums, servoMaximums)
 {
+  m_NumberOfServos = 4;
 }
 
-void FanGenerator::Update()
+void WaveGenerator::Update()
 {
   unsigned long now = millis();
   if (now - m_LastUpdate > m_Interval)
@@ -26,7 +27,13 @@ void FanGenerator::Update()
 
     for (int i = 0; i < m_NumberOfServos; i++)
     {
-      int pwm = map(m_Position, 0, 180, m_ServoMinimums[i], m_ServoMaximums[i]);
+      int position = m_Position + (i * 10 * m_Direction);
+      if (position < 0)
+        position = 0;
+      else if (position > 180)
+        position = 180;
+
+      int pwm = map(position, 0, 180, m_ServoMinimums[i], m_ServoMaximums[i]);
       m_ServoDriver.setPWM(i, 0, pwm);
       m_ServoPositions[i] = m_Position;
     }

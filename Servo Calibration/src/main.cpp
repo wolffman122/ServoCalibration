@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include "FanGenerator.h"
+#include "WaveGenerator.h"
 #include "ServoDriver.h"
 
 std::shared_ptr<IServoDriver> spServoDriver;
@@ -210,13 +211,25 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
         // Set all servos to maximum
         MaximumAllServos();
         break;
+      case commands::startFan:
+        // Switch to FanGenerator and start
+        spGenerator = std::make_shared<FanGenerator>(*spServoDriver, servoPositions, servoMinimums, servoMaximums);
+        spGenerator->Start();
+        break;
+      case commands::stopFan:
+        // Stop the current generator
+        if (spGenerator)
+          spGenerator->Stop();
+        break;
       case commands::startWave:
-        // Make all servos wave
+        // Switch to WaveGenerator and start
+        spGenerator = std::make_shared<WaveGenerator>(*spServoDriver, servoPositions, servoMinimums, servoMaximums);
         spGenerator->Start();
         break;
       case commands::stopWave:
-        // Stop the wave animation
-        spGenerator->Stop();
+        // Stop the current generator
+        if (spGenerator)
+          spGenerator->Stop();
         break;
       case commands::addWaveServo:
         // Add a servo to the wave animation
