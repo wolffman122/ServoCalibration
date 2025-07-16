@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "Generator.h"
 
-Generator::Generator(IServoDriver &servoDriver, WebSocketsServer *pWebSocket, int *servoPositions, int *servoMinimums, int *servoMaximums)
-    : m_ServoDriver(servoDriver), m_pWebSocket(pWebSocket), m_ServoPositions(servoPositions), m_ServoMinimums(servoMinimums), m_ServoMaximums(servoMaximums)
+Generator::Generator(IServoDriver &servoDriver, WebSocketsServer *pWebSocket, int *servoMinimums, int *servoMaximums)
+    : m_ServoDriver(servoDriver), m_pWebSocket(pWebSocket), m_ServoMinimums(servoMinimums), m_ServoMaximums(servoMaximums)
 {
 }
 

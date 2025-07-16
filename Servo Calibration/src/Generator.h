@@ -18,10 +18,9 @@ protected:
   int m_NumberOfServos = 1;            // Number of servos in the wave
   int *m_ServoMinimums = nullptr;
   int *m_ServoMaximums = nullptr;
-  int *m_ServoPositions = nullptr;
 
 public:
-  Generator(IServoDriver &servoDriver, WebSocketsServer *pWebSocket, int *servoPositions, int *servoMinimums, int *servoMaximums);
+  Generator(IServoDriver &servoDriver, WebSocketsServer *pWebSocket, int *servoMinimums, int *servoMaximums);
 
   virtual ~Generator() override = default;
 

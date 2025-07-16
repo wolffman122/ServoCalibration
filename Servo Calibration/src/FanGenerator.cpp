@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "FanGenerator.h"
 
-FanGenerator::FanGenerator(IServoDriver &servoDriver, WebSocketsServer *pWebSocket, int *servoPositions, int *servoMinimums, int *servoMaximums)
-    : Generator(servoDriver, pWebSocket, servoPositions, servoMinimums, servoMaximums)
+FanGenerator::FanGenerator(IServoDriver &servoDriver, WebSocketsServer *pWebSocket, int *servoMinimums, int *servoMaximums)
+    : Generator(servoDriver, pWebSocket, servoMinimums, servoMaximums)
 {
 }
 
@@ -28,7 +28,6 @@ void FanGenerator::Update()
     {
       int pwm = map(m_Position, 0, 180, m_ServoMinimums[i], m_ServoMaximums[i]);
       m_ServoDriver.setPWM(i, 0, pwm);
-      m_ServoPositions[i] = m_Position;
     }
 
     m_LastUpdate = now;

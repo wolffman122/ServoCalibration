@@ -24,7 +24,6 @@ std::shared_ptr<IGenerator> spGenerator;
 
 int servoMinimums[12] = {75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75};
 int servoMaximums[12] = {500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500};
-int servoPositions[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 JsonDocument docTX;
 JsonDocument docRX;
@@ -171,7 +170,7 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
         break;
       case commands::startFan:
         // Switch to FanGenerator and start
-        spGenerator = std::make_shared<FanGenerator>(*spServoDriver, pwebSocketServer, servoPositions, servoMinimums, servoMaximums);
+        spGenerator = std::make_shared<FanGenerator>(*spServoDriver, pwebSocketServer, servoMinimums, servoMaximums);
         spGenerator->Start();
         break;
       case commands::stopFan:
@@ -181,7 +180,7 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
         break;
       case commands::startWave:
         // Switch to WaveGenerator and start
-        spGenerator = std::make_shared<WaveGenerator>(*spServoDriver, pwebSocketServer, servoPositions, servoMinimums, servoMaximums);
+        spGenerator = std::make_shared<WaveGenerator>(*spServoDriver, pwebSocketServer, servoMinimums, servoMaximums);
         spGenerator->Start();
         break;
       case commands::stopWave:
@@ -221,7 +220,7 @@ void setup()
   Serial.println("Wire Begin " + wireBeginRet);
 
   spServoDriver = std::make_shared<ServoDriver>();
-  spGenerator = std::make_shared<FanGenerator>(*spServoDriver, pwebSocketServer, servoPositions, servoMinimums, servoMaximums);
+  spGenerator = std::make_shared<FanGenerator>(*spServoDriver, pwebSocketServer, servoMinimums, servoMaximums);
 
   pwebSocketServer->begin();
   pwebSocketServer->onEvent(webSocketEvent);
