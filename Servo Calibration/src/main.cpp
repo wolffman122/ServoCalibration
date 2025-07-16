@@ -20,27 +20,13 @@ const char *ssid = "Wolffden";
 const char *password = "wolffresidence1322";
 // WiFiServer server(80);
 
-// Current Time
-unsigned long currentTime = millis();
-// Previous Time
-unsigned long previousTime = 0;
-// Define timeout time in milliseconds
-const long timeoutTime = 2000;
-
-Preferences preferences;
-
 std::shared_ptr<IGenerator> spGenerator;
 
 int servoMinimums[12] = {75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75, 75};
 int servoMaximums[12] = {500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500};
 int servoPositions[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-int servoTotalRange[12] = {180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180};
-float servoConversions[12] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-int sleepAngle[12] = {90, 150, 0, 90, 30, 180, 90, 150, 0, 90, 30, 180};
-int adjustedMinPWM[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-int adjustedMaxPWM[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-StaticJsonDocument<200> docTX;
+JsonDocument<200> docTX;
 StaticJsonDocument<200> docRX;
 
 enum class commands
@@ -144,34 +130,6 @@ void initWiFi()
   Serial.println(WiFi.localIP());
 }
 
-void StoreValues()
-{
-  preferences.begin("servo-config", false);
-
-  for (int i = 0; i < 12; i++)
-  {
-    preferences.putInt(("min" + String(i)).c_str(), servoMinimums[i]);
-    preferences.putInt(("max" + String(i)).c_str(), servoMaximums[i]);
-    preferences.putInt(("totalRange" + String(i)).c_str(), servoTotalRange[i]);
-  }
-
-  preferences.end();
-}
-
-void LoadValues()
-{
-  preferences.begin("servo-config", true);
-
-  for (int i = 0; i < 12; i++)
-  {
-    servoMinimums[i] = preferences.getInt(("min" + String(i)).c_str(), 75);
-    servoMaximums[i] = preferences.getInt(("max" + String(i)).c_str(), 550);
-    servoTotalRange[i] = preferences.getInt(("totalRange" + String(i)).c_str(), 180);
-  }
-
-  preferences.end();
-}
-
 void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
 {
   switch (type)
@@ -239,86 +197,10 @@ void webSocketEvent(byte num, WStype_t type, uint8_t *payload, size_t length)
         // Remove a servo from the wave animation
         spGenerator->RemoveServo();
         break;
-      case commands::updateServoData:
-        Serial.println("Received updateServoData action.");
-        {
-          JsonArray dataArray = docRX["data"];
-          for (int i = 0; i < dataArray.size(); i++)
-          {
-            servoMinimums[i] = (int)(dataArray[i]["minimum"]);
-            servoMaximums[i] = (int)(dataArray[i]["maximum"]);
-            servoPositions[i] = (int)(dataArray[i]["position"]);
-            servoConversions[i] = (float)(dataArray[i]["conversionFactor"]);
-            adjustedMinPWM[i] = (int)(dataArray[i]["adjustedMinPWM"]);
-            adjustedMaxPWM[i] = (int)(dataArray[i]["adjustedMaxPWM"]);
-          }
-        }
-        break;
-      case commands::minPWMChange:
-        Serial.println("Received minPWMChange action.");
-        {
-          JsonArray dataArray = docRX["data"];
-          const int servoNumber = (int)(dataArray[0]["servoNumber"]);
-          servoMinimums[servoNumber] = (int)(dataArray[0]["minimum"]);
-          spServoDriver->setPWM(servoNumber, 0, servoMinimums[servoNumber]);
-        }
-        break;
-      case commands::maxPWMChange:
-        Serial.println("Received maxPWMChange action.");
-        {
-          JsonArray dataArray = docRX["data"];
-          const int servoNumber = (int)(dataArray[0]["servoNumber"]);
-          servoMaximums[servoNumber] = (int)(dataArray[0]["maximum"]);
-          spServoDriver->setPWM(servoNumber, 0, servoMaximums[servoNumber]);
-        }
-        break;
-      case commands::setAllToPWM:
-        Serial.println("Received setAllToPWM action.");
-        {
-          boolean minimum = docRX["minimum"].as<boolean>();
-          for (int i = 0; i < 12; i++)
-          {
-            int target = minimum ? servoMinimums[i] : servoMaximums[i];
-            spServoDriver->setPWM(i, 0, target);
-          }
-        }
-        break;
-      case commands::totalRangeChange:
-        Serial.println("Received totalRangeChange action.");
-        {
-          JsonArray dataArray = docRX["data"];
-          const int servoNumber = (int)(dataArray[0]["servoNumber"]);
-          servoTotalRange[servoNumber] = (int)(dataArray[0]["totalRange"]);
-          servoConversions[servoNumber] = (float)(servoMaximums[servoNumber] - servoMinimums[servoNumber]) / servoTotalRange[servoNumber];
-          const float extraRange = (servoTotalRange[servoNumber] - 180) / 2.0;
-          adjustedMinPWM[servoNumber] = ceil((servoConversions[servoNumber] * extraRange) + servoMinimums[servoNumber]);
-          adjustedMaxPWM[servoNumber] = ceil((servoConversions[servoNumber] * extraRange) + servoMaximums[servoNumber]);
-          Serial.println(servoMaximums[servoNumber]);
-          Serial.println(servoMinimums[servoNumber]);
-          Serial.println(servoTotalRange[servoNumber]);
-          Serial.println(servoConversions[servoNumber]);
-          Serial.println(adjustedMinPWM[servoNumber]);
-          Serial.println(adjustedMaxPWM[servoNumber]);
-        }
-        break;
-      case commands::updatePositionData:
-        Serial.println("Received updatePositionData action.");
-        {
-          JsonArray dataArray = docRX["data"];
-          const int servoNumber = (int)(dataArray[0]["servoNumber"]);
-          const int position = (int)(dataArray[0]["position"]);
-          servoPositions[servoNumber] = position;
-          Serial.println("Received position update for servo " + String(servoNumber) + ": " + String(position) + ": " + String(servoPositions[servoNumber]));
-          long pwmPosition = map(position, 0, 180, servoMinimums[servoNumber], servoMaximums[servoNumber]);
-          spServoDriver->setPWM(servoNumber, 0, pwmPosition);
-        }
-        break;
       default:
-        Serial.print("Unknown action received: ");
-        Serial.println(actionStr);
+        Serial.println("Unknown action: " + actionStr);
         break;
       }
-      StoreValues();
     }
     else
     {
@@ -343,8 +225,6 @@ void setup()
 
   webSocket.begin();
   webSocket.onEvent(webSocketEvent);
-
-  // LoadValues();
 
   Serial.println("Setup Done");
 }
@@ -371,10 +251,6 @@ void loop()
       obj["minimum"] = servoMinimums[i];
       obj["maximum"] = servoMaximums[i];
       obj["position"] = servoPositions[i];
-      obj["totalRange"] = servoTotalRange[i];
-      obj["conversionFactor"] = servoConversions[i];
-      obj["adjustedMinPWM"] = adjustedMinPWM[i];
-      obj["adjustedMaxPWM"] = adjustedMaxPWM[i];
     }
 
     serializeJson(docTX, jsonString);
